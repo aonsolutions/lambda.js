@@ -17,7 +17,7 @@ exports.get = (event, context, callback) => {
 	context.callbackWaitsForEmptyEventLoop = false;
 
 	var id = event.pathParameters.id;
-    var domain = event.pathParameters.domain;
+  var domain = event.pathParameters.domain;
 
 	aon.invoice.select(pool,
     function(params){
@@ -33,4 +33,35 @@ exports.get = (event, context, callback) => {
 			  },
 		 });
   });
+};
+
+exports.insert = (event, context, callback) => {
+	// allows for using callbacks as finish/error-handlers
+	context.callbackWaitsForEmptyEventLoop = false;
+
+	var id = event.pathParameters.id;
+  event.domain = event.pathParameters.domain;
+
+	if(id){
+		event.id = id;
+		aon.invoice.update(pool, event, function(error, results, fields){
+			callback(null, {
+				statusCode: '200',
+			  body: JSON.stringify(results),
+			  headers: {
+				      'Content-Type': 'application/json',
+				},
+			});
+  	});
+	} else {
+		aon.invoice.insert(pool, event, function(error, results, fields){
+			callback(null, {
+				statusCode: '200',
+			  body: JSON.stringify(results),
+			  headers: {
+				      'Content-Type': 'application/json',
+				},
+			});
+  	});
+	}
 };
