@@ -1,0 +1,18 @@
+{
+	"name": "lambda",
+	"version": "0.0.0",
+	"description": "aon Solutions lambda",
+	"keywords": [
+		"aon"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/aonsolutions/lambda.js.git"
+	},
+	"bin": {},
+	"dependencies": {
+		"mysql": "^2.14.1"
+	},
+	"devDependencies": {},
+	"scripts": {}
+}
