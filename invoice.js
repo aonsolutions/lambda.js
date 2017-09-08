@@ -65,3 +65,22 @@ exports.insert = (event, context, callback) => {
   	});
 	}
 };
+
+exports.sabbatic = (event, context, callback) => {
+	// allows for using callbacks as finish/error-handlers
+	context.callbackWaitsForEmptyEventLoop = false;
+
+  var domain = event.pathParameters.domain;
+	event.domain = event.pathParameters.domain;
+
+	aon.sabbatic.sabbatic(pool, event,
+    function(error, results, fields){
+      callback(null, {
+        statusCode: '200',
+			  body: JSON.stringify(results),
+			  headers: {
+				      'Content-Type': 'application/json',
+			  },
+		 });
+  });
+};
