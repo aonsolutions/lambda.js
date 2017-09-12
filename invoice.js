@@ -16,12 +16,12 @@ exports.get = (event, context, callback) => {
 	// allows for using callbacks as finish/error-handlers
 	context.callbackWaitsForEmptyEventLoop = false;
 
-	var id = event.pathParameters.id;
+	var invoice = event.pathParameters.invoice;
   var domain = event.pathParameters.domain;
 
 	aon.invoice.select(pool,
     function(params){
-      if(id) return params.domain.equals(domain).and(params.id.equals(id));
+      if(invoice) return params.domain.equals(domain).and(params.id.equals(invoice));
       else return params.domain.equals(domain);
     },
     function(error, results, fields){
@@ -39,12 +39,14 @@ exports.insert = (event, context, callback) => {
 	// allows for using callbacks as finish/error-handlers
 	context.callbackWaitsForEmptyEventLoop = false;
 
-	var id = event.pathParameters.id;
-  event.domain = event.pathParameters.domain;
+	var invoice = event.pathParameters.invoice;
+	var domain = event.pathParameters.domain;
+	var data = JSON.parse(event.body);
+	data.domain = domain;
 
-	if(id){
-		event.id = id;
-		aon.invoice.update(pool, event, function(error, results, fields){
+	if(invoice){
+		data.id = invoice;
+		aon.invoice.update(pool, data, function(error, results, fields){
 			callback(null, {
 				statusCode: '200',
 			  body: JSON.stringify(results),
@@ -54,7 +56,7 @@ exports.insert = (event, context, callback) => {
 			});
   	});
 	} else {
-		aon.invoice.insert(pool, event, function(error, results, fields){
+		aon.invoice.insert(pool, data, function(error, results, fields){
 			callback(null, {
 				statusCode: '200',
 			  body: JSON.stringify(results),
@@ -70,10 +72,11 @@ exports.sabbatic = (event, context, callback) => {
 	// allows for using callbacks as finish/error-handlers
 	context.callbackWaitsForEmptyEventLoop = false;
 
-  var domain = event.pathParameters.domain;
-	event.domain = event.pathParameters.domain;
+	var domain = event.pathParameters.domain;
+	var data = JSON.parse(event.body);
+	data.domain = domain;
 
-	aon.sabbatic.sabbatic(pool, event,
+	aon.sabbatic.sabbatic(pool, data,
     function(error, results, fields){
       callback(null, {
         statusCode: '200',
