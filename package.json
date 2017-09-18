@@ -1,7 +1,7 @@
 {
-	"name": "lambda",
+	"name": "aon-aws-lambda",
 	"version": "0.0.0",
-	"description": "aon Solutions lambda",
+	"description": "aon Solutions AWS Lambda",
 	"keywords": [
 		"aon"
 	],
@@ -11,6 +11,7 @@
 	},
 	"bin": {},
 	"dependencies": {
+		"aon": "0.0.1",
 		"mysql": "^2.14.1"
 	},
 	"devDependencies": {},
