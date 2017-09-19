@@ -1,3 +1,11 @@
 language: node_js
 node_js:
   - "6.10"
+deploy:
+  provider: s3
+  skip_cleanup: true
+  bucket: "lambda.js"
+  access_key_id: "AWS ACCESS KEY ID"
+  secret_access_key: "AWS SECRET ACCESS KEY"
+  on:
+    tags: true
