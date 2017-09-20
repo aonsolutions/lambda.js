@@ -5,6 +5,7 @@ deploy:
   provider: s3
   skip_cleanup: true
   bucket: "lambda.js"
+  region: eu-west-1
   access_key_id: "AWS ACCESS KEY ID"
   secret_access_key: "AWS SECRET ACCESS KEY"
   on:
