@@ -12,6 +12,33 @@ var pool  = mysql.createPool({
 	database : process.env.DB_NAME
 });
 
+exports.getWithAuth = (event, context, callback) => {
+	// allows for using callbacks as finish/error-handlers
+	context.callbackWaitsForEmptyEventLoop = false;
+
+	if(!event.headers.token) {
+		var error = new Error("Tu petición no tiene cabecera de autorización");
+		callback(error);
+  }
+
+	aon.auth.checkAuthentication(token, function(error, auth){
+		if(error) callback(error);
+		var data = JSON.parse(event.body);
+		data.domain = auth.domain;
+		data.user = auth.user;
+		data.invoice = event.pathParameters.invoice;
+		aon.invoice.select(pool, data, function(error, results, fields){
+      callback(null, {
+        statusCode: '200',
+			  body: JSON.stringify(results),
+			  headers: {
+				      'Content-Type': 'application/json',
+			  },
+		 });
+  	});
+	})
+};
+
 exports.get = (event, context, callback) => {
 	// allows for using callbacks as finish/error-handlers
 	context.callbackWaitsForEmptyEventLoop = false;
