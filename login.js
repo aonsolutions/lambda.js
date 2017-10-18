@@ -16,10 +16,13 @@ exports.login = (event, context, callback) => {
 	// allows for using callbacks as finish/error-handlers
 	context.callbackWaitsForEmptyEventLoop = false;
 
-  var username = event.body.username;
-  var password = event.body.password;
+	var auth = new Object();
+	auth.email = event.body.email;
+	auth.domain = event.body.domain;
+  auth.username = event.body.username;
+  auth.password = event.body.password;
 
-	aon.auth.login(username, password, function(error, results, fields){
+	aon.auth.login(auth, function(error, results, fields){
     if(error) callback(error);
     callback(null, {
       statusCode: '200',
