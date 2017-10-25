@@ -99,15 +99,13 @@ exports.insert = (event, context, callback) => {
 	}
 };
 
-exports.sabbatic = (event, context, callback) => {
+exports.import = (event, context, callback) => {
 	// allows for using callbacks as finish/error-handlers
 	context.callbackWaitsForEmptyEventLoop = false;
 
-	var domain = event.pathParameters.domain;
 	var data = JSON.parse(event.body);
-	data.domain = domain;
 
-	aon.sabbatic.sabbatic(pool, data,
+	aon.invoice.import(pool, data,
     function(error, results, fields){
       callback(null, {
         statusCode: '200',
@@ -164,7 +162,7 @@ exports.sesImport = (event, context, callback) => {
 			r.sbUser = process.env.SB_USER;
 			r.sbPassword = process.env.SB_PASSWD;
 			console.log(r);
-			aon.invoiceImport.importFromFile(pool, r, function(error, result){
+			aon.invoiceImport.importSabbatic(pool, r, function(error, result){
 
 			});
 		}
