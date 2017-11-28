@@ -1,60 +1,15 @@
 'use strict';
 
-var aon = require('aon');
-var mysql = require('mysql');
 var AWS = require('aws-sdk');
 var SES = require('aws-sdk/clients/ses');
+var aon = require('aon');
 
-console.log("DB_HOST:" + process.env.DB_HOST);
-console.log("DB_USER:" + process.env.DB_USER);
-console.log("DB_PASSWD:" + process.env.DB_PASSWD);
-
-var pool  = mysql.createPool({
-	host     : process.env.DB_HOST,
-	user     : process.env.DB_USER,
-	password : process.env.DB_PASSWD,
-	database : process.env.DB_NAME
-});
-
-exports.getWithAuth = (event, context, callback) => {
+exports.import = (event, context, callback) => {
 	// allows for using callbacks as finish/error-handlers
 	context.callbackWaitsForEmptyEventLoop = false;
 
-	if(!event.headers.token) {
-		var error = new Error("Tu petición no tiene cabecera de autorización");
-		callback(error);
-  }
-
-	aon.auth.checkAuthentication(token, function(error, auth){
-		if(error) callback(error);
-		var data = JSON.parse(event.body);
-		data.domain = auth.domain;
-		data.user = auth.user;
-		data.invoice = event.pathParameters.invoice;
-		aon.invoice.select(pool, data, function(error, results, fields){
-      callback(null, {
-        statusCode: '200',
-			  body: JSON.stringify(results),
-			  headers: {
-				      'Content-Type': 'application/json',
-			  },
-		 });
-  	});
-	})
-};
-
-exports.get = (event, context, callback) => {
-	// allows for using callbacks as finish/error-handlers
-	context.callbackWaitsForEmptyEventLoop = false;
-
-	var invoice = event.pathParameters.invoice;
-  var domain = event.pathParameters.domain;
-
-	aon.invoice.select(pool,
-    function(params){
-      if(invoice) return params.domain.equals(domain).and(params.id.equals(invoice));
-      else return params.domain.equals(domain);
-    },
+	console.log(event);
+	aon.invoice.importInvoice(event,
     function(error, results, fields){
       callback(null, {
         statusCode: '200',
@@ -66,47 +21,15 @@ exports.get = (event, context, callback) => {
   });
 };
 
-exports.insert = (event, context, callback) => {
+exports.refresh = (event, context, callback) => {
 	// allows for using callbacks as finish/error-handlers
 	context.callbackWaitsForEmptyEventLoop = false;
+	var r = {};
+	r.sbUser = process.env.SB_USER;
+	r.sbPassword = process.env.SB_PASSWD;
 
-	var invoice = event.pathParameters.invoice;
-	var domain = event.pathParameters.domain;
-	var data = JSON.parse(event.body);
-	data.domain = domain;
-
-	if(invoice){
-		data.id = invoice;
-		aon.invoice.update(pool, data, function(error, results, fields){
-			callback(null, {
-				statusCode: '200',
-			  body: JSON.stringify(results),
-			  headers: {
-				      'Content-Type': 'application/json',
-				},
-			});
-  	});
-	} else {
-		aon.invoice.insert(pool, data, function(error, results, fields){
-			callback(null, {
-				statusCode: '200',
-			  body: JSON.stringify(results),
-			  headers: {
-				      'Content-Type': 'application/json',
-				},
-			});
-  	});
-	}
-};
-
-exports.import = (event, context, callback) => {
-	// allows for using callbacks as finish/error-handlers
-	context.callbackWaitsForEmptyEventLoop = false;
-
-	var data = JSON.parse(event.body);
-
-	aon.invoice.import(pool, data,
-    function(error, results, fields){
+	aon.invoice.refreshSabbatic(r,
+		function(error, results, fields){
       callback(null, {
         statusCode: '200',
 			  body: JSON.stringify(results),
@@ -157,52 +80,14 @@ exports.sesImport = (event, context, callback) => {
 			}
 			var r = {};
 			r.email = mail.commonHeaders.returnPath;
-			r.domain = mail.commonHeaders.subject;
+			r.company = mail.commonHeaders.subject;
 			r.files = array;
 			r.sbUser = process.env.SB_USER;
 			r.sbPassword = process.env.SB_PASSWD;
 			console.log(r);
-			aon.invoiceImport.importSabbatic(pool, r, function(error, result){
-
+			aon.invoice.importSabbatic(r, function(error, result){
+				console.log(result);
 			});
 		}
-	});
-  var params = {
-		Destination: { /* required */
-	  	CcAddresses: [
-	 		],
-	    ToAddresses: [
-		  	mail.commonHeaders.returnPath
-	    ],
-	    BccAddresses: [
-	    ]
-		},
-	  Message: { /* required */
-	  	Body: { /* required */
-				Html: {
-					Charset: "UTF-8",
-					Data: "This message body contains HTML formatting. It can, for example, contain links like this one: <a class=\"ulink\" href=\"http://docs.aws.amazon.com/ses/latest/DeveloperGuide\" target=\"_blank\">Amazon SES Developer Guide</a>."
-				},
-				Text: {
-					Charset: "UTF-8",
-					Data: "This is the message body in text format."
-				}
-	  	},
-	    Subject: { /* required */
-	    	Charset: "UTF-8",
-	    	Data: "Hemos recibido tu solicitud"
-	    }
-		},
-	 	ReplyToAddresses: [
-	  ],
-	  Source: "factura@tedi.center"
-	};
-
-	console.log(params);
-
-	ses.sendEmail(params, function(err, data) {
-		if (err) console.log(err, err.stack); // an error occurred
-		else console.log(data);           // successful response
-		callback();
 	});
 };
