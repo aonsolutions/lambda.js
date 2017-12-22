@@ -9,8 +9,8 @@ exports.get = (event, context, callback) => {
 	// allows for using callbacks as finish/error-handlers
 	context.callbackWaitsForEmptyEventLoop = false;
 	var data = {
-		company: event.g,
-		number:
+		company: event.pathParameters.company,
+		number: parseInt(event.pathParameters.number)
 	}
 	aon.invoice.getInvoice()
 };
@@ -21,7 +21,7 @@ exports.delete = (event, context, callback) => {
 
 	var data = {
 		company: event.pathParameters.company,
-		number: event.pathParameters.number
+		number: parseInt(event.pathParameters.number)
 	}
 
 	aon.invoice.deleteInvoice(data, function(error, results, fields){
@@ -136,4 +136,4 @@ exports.sesImport = (event, context, callback) => {
 
 exports.fileImport = (event, context, callback) => {
 
-}:
+};
