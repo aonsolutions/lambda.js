@@ -3,53 +3,61 @@
 var AWS = require('aws-sdk');
 var SES = require('aws-sdk/clients/ses');
 var aon = require('aon');
+var ERROR = require('./errors');
 // INVOICE GET & POST (import)
 
 exports.get = (event, context, callback) => {
 	// allows for using callbacks as finish/error-handlers
 	context.callbackWaitsForEmptyEventLoop = false;
-	var data = {
-		company: event.pathParameters.company,
-		number: parseInt(event.pathParameters.number)
+	
+	var token = "";
+	auth.checkAuthentication(token, function(error, user)){
+		if(error) callback(null, responseMessage('401', ERROR.ERROR_401));
+
+		var data = {
+			company: event.pathParameters.company,
+			number: parseInt(event.pathParameters.number)
+		}
+		if(esta(data.company, user.companies)){
+			invoice.getInvoice(data, function(error, results, fields){
+				callback(null, responseMessage('200', JSON.stringify(results)));
+			});
+		} else callback(null, responseMessage('403', ERROR.ERROR_403));
 	}
-	aon.invoice.getInvoice()
 };
 
 exports.delete = (event, context, callback) => {
 	// allows for using callbacks as finish/error-handlers
 	context.callbackWaitsForEmptyEventLoop = false;
 
-	var data = {
-		company: event.pathParameters.company,
-		number: parseInt(event.pathParameters.number)
+	var token = "";
+	auth.checkAuthentication(token, function(error, user)){
+		if(error) callback(null, responseMessage('401', ERROR.ERROR_401));
+		var data = {
+			company: event.pathParameters.company,
+			number: parseInt(event.pathParameters.number)
+		}
+		if(esta(data.company, user.companies)){
+			aon.invoice.deleteInvoice(data, function(error, results, fields){
+				callback(null, responseMessage('200',  JSON.stringify(results)));
+			});
+		} else callback(null, responseMessage('403', ERROR.ERROR_403));
 	}
-
-	aon.invoice.deleteInvoice(data, function(error, results, fields){
-		callback(null, {
-			statusCode: '200',
-			body: JSON.stringify(results),
-			headers: {
-					'Content-Type': 'application/json',
-			},
- 		});
-	});
 };
 
 exports.import = (event, context, callback) => {
 	// allows for using callbacks as finish/error-handlers
 	context.callbackWaitsForEmptyEventLoop = false;
 
-	console.log(event);
-	aon.invoice.importInvoice(event,
-    function(error, results, fields){
-      callback(null, {
-        statusCode: '200',
-			  body: JSON.stringify(results),
-			  headers: {
-				      'Content-Type': 'application/json',
-			  },
-		 });
-  });
+	var token = "";
+	auth.checkAuthentication(token, function(error, user)){
+		if(error) callback(null, responseMessage('401', ERROR.ERROR_401));
+		if(esta(event.company, user.companies)){
+			aon.invoice.importInvoice(event, function(error, results, fields){
+      	callback(null, responseMessage('200', JSON.stringify(results)));
+  		});
+		} else callback(null, responseMessage('403', ERROR.ERROR_403));
+	}
 };
 
 // GET SABBATIC INVOICE WITH STATUS 'SEND' OR 'PENDING' AND UPDATE INVOICE.
@@ -61,15 +69,8 @@ exports.refresh = (event, context, callback) => {
 	r.sbUser = process.env.SB_USER;
 	r.sbPassword = process.env.SB_PASSWD;
 
-	aon.invoice.refreshSabbatic(r,
-		function(error, results, fields){
-      callback(null, {
-        statusCode: '200',
-			  body: JSON.stringify(results),
-			  headers: {
-				      'Content-Type': 'application/json',
-			  },
-		 });
+	aon.invoice.refreshSabbatic(r, function(error, results, fields){
+      callback(null, responseMessage('200', JSON.stringify(results)));
   });
 };
 
@@ -137,3 +138,20 @@ exports.sesImport = (event, context, callback) => {
 exports.fileImport = (event, context, callback) => {
 
 };
+
+function responseMessage(code, description){
+	return {
+	 statusCode: code,
+	 body: description,
+	 headers: {
+				 'Content-Type': 'application/json',
+	 	 }
+	}
+}
+
+function esta(o, oa){
+	for(var i = 0 ; i < oa.length; i++){
+		if(o == oa[i]) return true;
+	}
+	return false;
+}
