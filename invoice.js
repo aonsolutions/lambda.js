@@ -9,8 +9,8 @@ var ERROR = require('./errors');
 exports.get = (event, context, callback) => {
 	// allows for using callbacks as finish/error-handlers
 	context.callbackWaitsForEmptyEventLoop = false;
-	
-	var token = "";
+
+	var token = event.headers.session_id;
 	auth.checkAuthentication(token, function(error, user)){
 		if(error) callback(null, responseMessage('401', ERROR.ERROR_401));
 
@@ -30,7 +30,7 @@ exports.delete = (event, context, callback) => {
 	// allows for using callbacks as finish/error-handlers
 	context.callbackWaitsForEmptyEventLoop = false;
 
-	var token = "";
+	var token = event.headers.session_id;
 	auth.checkAuthentication(token, function(error, user)){
 		if(error) callback(null, responseMessage('401', ERROR.ERROR_401));
 		var data = {
@@ -49,7 +49,7 @@ exports.import = (event, context, callback) => {
 	// allows for using callbacks as finish/error-handlers
 	context.callbackWaitsForEmptyEventLoop = false;
 
-	var token = "";
+	var token = event.headers.session_id;
 	auth.checkAuthentication(token, function(error, user)){
 		if(error) callback(null, responseMessage('401', ERROR.ERROR_401));
 		if(esta(event.company, user.companies)){
@@ -130,6 +130,44 @@ exports.sesImport = (event, context, callback) => {
 			console.log(r.email + " - " + r.company);
 			aon.invoice.importSabbatic(r, function(error, result){
 				console.log(result);
+				var params = {
+					Destination: { /* required */
+				  	CcAddresses: [
+				 		],
+				    ToAddresses: [
+					  	mail.commonHeaders.returnPath
+				    ],
+				    BccAddresses: [
+				    ]
+					},
+				  Message: { /* required */
+				  	Body: { /* required */
+							Html: {
+								Charset: "UTF-8",
+								Data: "This message body contains HTML formatting. It can, for example, contain links like this one: <a class=\"ulink\" href=\"http://docs.aws.amazon.com/ses/latest/DeveloperGuide\" target=\"_blank\">Amazon SES Developer Guide</a>."
+							},
+							Text: {
+								Charset: "UTF-8",
+								Data: "This is the message body in text format."
+							}
+				  	},
+				    Subject: { /* required */
+				    	Charset: "UTF-8",
+				    	Data: "Hemos recibido tu solicitud"
+				    }
+					},
+				 	ReplyToAddresses: [
+				  ],
+				  Source: "factura@tedi.center"
+				};
+
+				console.log(params);
+
+				ses.sendEmail(params, function(err, data) {
+					if (err) console.log(err, err.stack); // an error occurred
+					else console.log(data);           // successful response
+					callback();
+				});
 			});
 		}
 	});
