@@ -13,11 +13,11 @@ exports.getUser = (event, context, callback) => {
 					callback(null, responseMessage('200', JSON.stringify(results)));
 				});
 			} else {
-				var data = {
+				var data = event.queryStringParameters ? {
 					email: event.queryStringParameters.email,
 					company: event.queryStringParameters.company,
 					group: event.queryStringParameters.group
-				}
+				} : {};
 				user.getUserList(data, function(error, results, fields){
 					callback(null, responseMessage('200', JSON.stringify(results)));
 				});
