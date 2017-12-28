@@ -139,13 +139,9 @@ exports.sesImport = (event, context, callback) => {
 					console.log(result);
 					var params = {
 						Destination: { /* required */
-				  			CcAddresses: [
-				 				],
-				    		ToAddresses: [
-					  			mail.commonHeaders.returnPath
-				    		],
-				    		BccAddresses: [
-				    		]
+				  			CcAddresses: [],
+				    		ToAddresses: [mail.commonHeaders.returnPath],
+				    		BccAddresses: []
 							},
 				  		Message: { /* required */
 				  		Body: { /* required */
