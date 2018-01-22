@@ -6,12 +6,12 @@ exports.login = (event, context, callback) => {
 
 	aon.auth.login(event,  function(error, results, fields){
 		if(error) callback(error);
-		callback(null, {
-			statusCode: '200',
-			body: JSON.stringify(results),
-			headers: {
+		else callback(null, {
+				statusCode: '200',
+				body: JSON.stringify(results),
+				headers: {
 					'Content-Type': 'application/json',
-			},
- 		});
+				},
+ 			});
 	});
 }

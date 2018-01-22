@@ -1,9 +1,20 @@
 'use strict';
 
+var aon = require('aon');
+var mysql = require('mysql');
+
 var AWS = require('aws-sdk');
 var SES = require('aws-sdk/clients/ses');
-var aon = require('aon');
+
 var ERROR = require('./errors');
+
+var pool  = mysql.createPool({
+	host     : process.env.DB_HOST,
+	user     : process.env.DB_USER,
+	password : process.env.DB_PASSWD,
+	database : process.env.DB_NAME
+});
+
 // INVOICE GET & POST (import)
 
 exports.get = (event, context, callback) => {
@@ -13,16 +24,17 @@ exports.get = (event, context, callback) => {
 	var token = event.headers.session_id;
 	aon.auth.checkAuthentication(token, function(error, user)){
 		if(error) callback(null, responseMessage('401', ERROR.ERROR_401));
-
-		var data = {
-			company: event.pathParameters.company,
-			number: parseInt(event.pathParameters.number)
+		else {
+			var data = {
+				company: event.pathParameters.company,
+				number: parseInt(event.pathParameters.number)
+			}
+			if(esta(data.company, user.companies)){
+				aon.invoiceDynamo.getInvoice(data, function(error, results, fields){
+					callback(null, responseMessage('200', JSON.stringify(results)));
+				});
+			} else callback(null, responseMessage('403', ERROR.ERROR_403));
 		}
-		if(esta(data.company, user.companies)){
-			aon.invoice.getInvoice(data, function(error, results, fields){
-				callback(null, responseMessage('200', JSON.stringify(results)));
-			});
-		} else callback(null, responseMessage('403', ERROR.ERROR_403));
 	}
 };
 
@@ -33,15 +45,17 @@ exports.delete = (event, context, callback) => {
 	var token = event.headers.session_id;
 	aon.auth.checkAuthentication(token, function(error, user)){
 		if(error) callback(null, responseMessage('401', ERROR.ERROR_401));
-		var data = {
-			company: event.pathParameters.company,
-			number: parseInt(event.pathParameters.number)
+		else {
+			var data = {
+				company: event.pathParameters.company,
+				number: parseInt(event.pathParameters.number)
+			}
+			if(esta(data.company, user.companies)){
+				aon.invoiceDynamo.deleteInvoice(data, function(error, results, fields){
+					callback(null, responseMessage('200',  JSON.stringify(results)));
+				});
+			} else callback(null, responseMessage('403', ERROR.ERROR_403));
 		}
-		if(esta(data.company, user.companies)){
-			aon.invoice.deleteInvoice(data, function(error, results, fields){
-				callback(null, responseMessage('200',  JSON.stringify(results)));
-			});
-		} else callback(null, responseMessage('403', ERROR.ERROR_403));
 	}
 };
 
@@ -52,11 +66,16 @@ exports.import = (event, context, callback) => {
 	var token = event.headers.session_id;
 	aon.auth.checkAuthentication(token, function(error, user)){
 		if(error) callback(null, responseMessage('401', ERROR.ERROR_401));
-		if(esta(event.company, user.companies)){
-			aon.invoice.importInvoice(event, function(error, results, fields){
-      	callback(null, responseMessage('200', JSON.stringify(results)));
-  		});
-		} else callback(null, responseMessage('403', ERROR.ERROR_403));
+		else {
+			if(esta(event.company, user.companies)){
+				aon.invoiceDynamo.importInvoice(event, function(error, results, fields){
+      		callback(null, responseMessage('200', JSON.stringify(results)));
+					aon.invoiceSql.tEDi2Aon(pool, JSON.stringify(results), function(err, res){
+						// TODO
+					});
+  			});
+			} else callback(null, responseMessage('403', ERROR.ERROR_403));
+		}
 	}
 };
 
@@ -69,7 +88,7 @@ exports.refresh = (event, context, callback) => {
 	r.sbUser = process.env.SB_USER;
 	r.sbPassword = process.env.SB_PASSWD;
 
-	aon.invoice.refreshSabbatic(r, function(error, results, fields){
+	aon.invoiceDynamo.refreshSabbatic(r, function(error, results, fields){
       callback(null, responseMessage('200', JSON.stringify(results)));
   });
 };
@@ -135,7 +154,7 @@ exports.sesImport = (event, context, callback) => {
 					r.sbUser = process.env.SB_USER;
 					r.sbPassword = process.env.SB_PASSWD;
 					console.log(r.email + " - " + r.company);
-					aon.invoice.importSabbatic(r, function(error, result){
+					aon.invoiceDynamo.importSabbatic(r, function(error, result){
 					console.log(result);
 					var params = {
 						Destination: { /* required */
@@ -147,11 +166,11 @@ exports.sesImport = (event, context, callback) => {
 				  		Body: { /* required */
 								Html: {
 										Charset: "UTF-8",
-										Data: "This message body contains HTML formatting. It can, for example, contain links like this one: <a class=\"ulink\" href=\"http://docs.aws.amazon.com/ses/latest/DeveloperGuide\" target=\"_blank\">Amazon SES Developer Guide</a>."
+										Data: html_data
 									},
 									Text: {
 										Charset: "UTF-8",
-										Data: "This is the message body in text format."
+										Data: "Este es el cuerpo del mensaje en formato de texto"
 									}
 				  			},
 				    		Subject: { /* required */
@@ -178,6 +197,11 @@ exports.sesImport = (event, context, callback) => {
 	});
 };
 
+var html_data = "<p>Estimado Cliente,</p>"
+		+	"<p>Su solicitud se ha recibido correctamente. En breves recibirá un mensaje con el resultado de la misma.</p>"
+		+	"<p>Atentamente,</p>"
+		+	"<p>Departamento técnico | aonSolutions";
+
 exports.fileImport = (event, context, callback) => {
 
 };
@@ -187,8 +211,8 @@ function responseMessage(code, description){
 	 statusCode: code,
 	 body: description,
 	 headers: {
-				 'Content-Type': 'application/json',
-	 	 }
+		 'Content-Type': 'application/json',
+	 }
 	}
 }
 
