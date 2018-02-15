@@ -102,9 +102,10 @@ exports.sesImport = (event, context, callback) => {
 	var ses = new SES();
 
 	var mail = event.Records[0].ses.mail;
+	var to = mail.commonHeaders.to[0]
 	var filter = {
 		email: mail.commonHeaders.returnPath,
-		company: mail.commonHeaders.subject
+		company: to.split('@')[0]
 	}
 
 	aon.user.getUserList(filter, function(error, results)){
@@ -149,7 +150,7 @@ exports.sesImport = (event, context, callback) => {
 					}
 					var r = {};
 					r.email = mail.commonHeaders.returnPath;
-					r.company = mail.commonHeaders.subject;
+					r.company = to.split('@')[0];
 					r.files = array;
 					r.sbUser = process.env.SB_USER;
 					r.sbPassword = process.env.SB_PASSWD;
