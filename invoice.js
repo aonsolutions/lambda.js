@@ -22,7 +22,7 @@ exports.get = (event, context, callback) => {
 	context.callbackWaitsForEmptyEventLoop = false;
 
 	var token = event.headers.session_id;
-	aon.auth.checkAuthentication(token, function(error, user)){
+	aon.auth.checkAuthentication(token, function(error, user){
 		if(error) callback(null, responseMessage('401', ERROR.ERROR_401));
 		else {
 			var data = {
@@ -35,7 +35,7 @@ exports.get = (event, context, callback) => {
 				});
 			} else callback(null, responseMessage('403', ERROR.ERROR_403));
 		}
-	}
+	});
 };
 
 exports.delete = (event, context, callback) => {
@@ -43,7 +43,7 @@ exports.delete = (event, context, callback) => {
 	context.callbackWaitsForEmptyEventLoop = false;
 
 	var token = event.headers.session_id;
-	aon.auth.checkAuthentication(token, function(error, user)){
+	aon.auth.checkAuthentication(token, function(error, user){
 		if(error) callback(null, responseMessage('401', ERROR.ERROR_401));
 		else {
 			var data = {
@@ -56,7 +56,7 @@ exports.delete = (event, context, callback) => {
 				});
 			} else callback(null, responseMessage('403', ERROR.ERROR_403));
 		}
-	}
+	});
 };
 
 exports.import = (event, context, callback) => {
@@ -64,7 +64,7 @@ exports.import = (event, context, callback) => {
 	context.callbackWaitsForEmptyEventLoop = false;
 
 	var token = event.headers.session_id;
-	aon.auth.checkAuthentication(token, function(error, user)){
+	aon.auth.checkAuthentication(token, function(error, user){
 		if(error) callback(null, responseMessage('401', ERROR.ERROR_401));
 		else {
 			if(esta(event.company, user.companies)){
@@ -76,7 +76,7 @@ exports.import = (event, context, callback) => {
   			});
 			} else callback(null, responseMessage('403', ERROR.ERROR_403));
 		}
-	}
+	});
 };
 
 // GET SABBATIC INVOICE WITH STATUS 'SEND' OR 'PENDING' AND UPDATE INVOICE.
@@ -108,7 +108,7 @@ exports.sesImport = (event, context, callback) => {
 		company: to.split('@')[0]
 	}
 
-	aon.user.getUserList(filter, function(error, results)){
+	aon.user.getUserList(filter, function(error, results){
 		if(error) callback(error);
 		if(results.Count > 0){
 			var s3 = new AWS.S3();
@@ -116,7 +116,7 @@ exports.sesImport = (event, context, callback) => {
 				Bucket:'/receive-email-ses',
 				Key:mail.messageId,
 			};
-
+			var arrayIndex = 0;
 			s3.getObject(options, function(err, res) {
 				if (err !== null) {
 					console.log(err);
@@ -124,29 +124,31 @@ exports.sesImport = (event, context, callback) => {
 					var body = res.Body.toString('utf8');
 	  			var array = [];
 	  			var b = body.split("\n--");
+	  			for(var j = 0; j < b.length - 1; j++){
+						if(b[j].toString('utf8').includes('X-Attachment-Id')){
+							var b2 = b[j].split("\n");
+							var base = "";
+							var indez = 4;
+							while(!b2[indez].toString('utf8').includes('X-Attachment-Id')){
+								indez++;
+							}
 
-	  			for(var j = 5; j < b.length - 1; j++){
-	  				var b2 = b[j].split("\n");
-	    			var base = "";
+							for(var h = indez+2; h < b2.length; h++){
+								base = base + b2[h];
+							}
 
-						var indez = 4;
-						while(!b2[indez].toString('utf8').includes('X-Attachment-Id')){
-							indez++;
+							var o = {};
+	    				o.base64 = base.substring(0, base.length-1);
+	    				var index = b2[1].indexOf(';');
+	    				o.contentType = b2[1].substring(14,index);
+	    				o.name = b2[1].substring(index+7);
+	    				o.name = o.name.substring(0,o.name.length-1);
+	    				if(o.name.charAt(0) == "\""){
+	    					o.name = o.name.substring(1, o.name.length-1);
+							}
+	  					array[arrayIndex] = o;
+							arrayIndex++;
 						}
-
-	    			for(var h = indez+2; h < b2.length; h++){
-	    				base = base + b2[h];
-	   				}
-	    			var o = {};
-	    			o.base64 = base.substring(0, base.length-1);
-	    			var index = b2[1].indexOf(';');
-	    			o.contentType = b2[1].substring(14,index);
-	    			o.name = b2[1].substring(index+7);
-	    			o.name = o.name.substring(0,o.name.length-1);
-	    			if(o.name.charAt(0) == "\""){
-	    				o.name = o.name.substring(1, o.name.length-1);
-						}
-	  				array[j-5] = o;
 					}
 					var r = {};
 					r.email = mail.commonHeaders.returnPath;
