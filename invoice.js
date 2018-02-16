@@ -109,101 +109,112 @@ exports.sesImport = (event, context, callback) => {
 	}
 
 	aon.user.getUserList(filter, function(error, results){
-		if(error) callback(error);
-		if(results.Count > 0){
-			var s3 = new AWS.S3();
-  		var options = {
-				Bucket:'/receive-email-ses',
-				Key:mail.messageId,
-			};
-			var arrayIndex = 0;
-			s3.getObject(options, function(err, res) {
-				if (err !== null) {
-					console.log(err);
-				} else {
-					var body = res.Body.toString('utf8');
-	  			var array = [];
-	  			var b = body.split("\n--");
-	  			for(var j = 0; j < b.length - 1; j++){
-						if(b[j].toString('utf8').includes('X-Attachment-Id')){
-							var b2 = b[j].split("\n");
-							var base = "";
-							var indez = 4;
-							while(!b2[indez].toString('utf8').includes('X-Attachment-Id')){
-								indez++;
-							}
+		if(error) {
+			replayEmail(mail, to, "Ha sucedido un error inesparado en la solicitud realizada.", callback);
+			callback(error);
+		} else {
+			if(results.Count > 0){
+				var s3 = new AWS.S3();
+  			var options = {
+					Bucket:'/receive-email-ses',
+					Key:mail.messageId,
+				};
+				var arrayIndex = 0;
+				s3.getObject(options, function(err, res) {
+					if (err !== null) {
+						console.log(err);
+					} else {
+						var body = res.Body.toString('utf8');
+	  				var array = [];
+	  				var b = body.split("\n--");
+	  				for(var j = 0; j < b.length - 1; j++){
+							if(b[j].toString('utf8').includes('X-Attachment-Id')){
+								var b2 = b[j].split("\n");
+								var base = "";
+								var indez = 4;
+								while(!b2[indez].toString('utf8').includes('X-Attachment-Id')){
+									indez++;
+								}
 
-							for(var h = indez+2; h < b2.length; h++){
-								base = base + b2[h];
-							}
+								for(var h = indez+2; h < b2.length; h++){
+									base = base + b2[h];
+								}
 
-							var o = {};
-	    				o.base64 = base.substring(0, base.length-1);
-	    				var index = b2[1].indexOf(';');
-	    				o.contentType = b2[1].substring(14,index);
-	    				o.name = b2[1].substring(index+7);
-	    				o.name = o.name.substring(0,o.name.length-1);
-	    				if(o.name.charAt(0) == "\""){
-	    					o.name = o.name.substring(1, o.name.length-1);
+								var o = {};
+	    					o.base64 = base.substring(0, base.length-1);
+	    					var index = b2[1].indexOf(';');
+	    					o.contentType = b2[1].substring(14,index);
+	    					o.name = b2[1].substring(index+7);
+	    					o.name = o.name.substring(0,o.name.length-1);
+	    					if(o.name.charAt(0) == "\""){
+	    						o.name = o.name.substring(1, o.name.length-1);
+								}
+	  						array[arrayIndex] = o;
+								arrayIndex++;
 							}
-	  					array[arrayIndex] = o;
-							arrayIndex++;
 						}
-					}
-					var r = {};
-					r.email = mail.commonHeaders.returnPath;
-					r.company = to.split('@')[0];
-					r.files = array;
-					r.sbUser = process.env.SB_USER;
-					r.sbPassword = process.env.SB_PASSWD;
-					console.log(r.email + " - " + r.company);
-					aon.invoiceDynamo.importSabbatic(r, function(error, result){
-					console.log(result);
-					var params = {
-						Destination: { /* required */
-				  			CcAddresses: [],
-				    		ToAddresses: [mail.commonHeaders.returnPath],
-				    		BccAddresses: []
-							},
-				  		Message: { /* required */
-				  		Body: { /* required */
-								Html: {
-										Charset: "UTF-8",
-										Data: html_data
-									},
-									Text: {
-										Charset: "UTF-8",
-										Data: "Este es el cuerpo del mensaje en formato de texto"
-									}
-				  			},
-				    		Subject: { /* required */
-				    			Charset: "UTF-8",
-				    			Data: "Hemos recibido tu solicitud"
-				    		}
-							},
-				 			ReplyToAddresses: [
-				  		],
-				  		Source: "factura@tedi.center"
-						};
-
-						console.log(params);
-
-						ses.sendEmail(params, function(err, data) {
-							if (err) console.log(err, err.stack); // an error occurred
-							else console.log(data);           // successful response
-							callback();
+						var r = {};
+						r.email = mail.commonHeaders.returnPath;
+						r.company = to.split('@')[0];
+						r.files = array;
+						r.sbUser = process.env.SB_USER;
+						r.sbPassword = process.env.SB_PASSWD;
+						console.log(r.email + " - " + r.company);
+						aon.invoiceDynamo.importSabbatic(r, function(error, result){
+							console.log("lo enviara¿?");
+							replayEmail(mail, to, "Se ha recibido la solicitud correctamente, se está procesando en el sistema.", callback);
 						});
-					});
-				}
-			});
+					}
+				});
+			} else {
+				// ERROR PERMISOS
+				replayEmail(mail, to, "No tiene permisos para realizar la solicitud.", callback);
+			}
 		}
 	});
 };
 
-var html_data = "<p>Estimado Cliente,</p>"
-		+	"<p>Su solicitud se ha recibido correctamente. En breves recibirá un mensaje con el resultado de la misma.</p>"
-		+	"<p>Atentamente,</p>"
-		+	"<p>Departamento técnico | aonSolutions";
+function replayEmail(mail, to, data, callback){
+	var ses = new SES();
+	var html_data = "<p>Estimado Cliente,</p>"
+			+	"<p>" + data + "</p>"
+			+	"<p>Atentamente,</p>"
+			+	"<p>Departamento técnico | aonSolutions";
+	var params = {
+		Destination: { /* required */
+				CcAddresses: [],
+				ToAddresses: [mail.commonHeaders.returnPath],
+				BccAddresses: []
+			},
+			Message: { /* required */
+			Body: { /* required */
+				Html: {
+						Charset: "UTF-8",
+						Data: html_data
+					},
+					Text: {
+						Charset: "UTF-8",
+						Data: data
+					}
+				},
+				Subject: { /* required */
+					Charset: "UTF-8",
+					Data: "Hemos recibido tu solicitud"
+				}
+			},
+			ReplyToAddresses: [
+			],
+			Source: to
+		};
+
+		console.log(params);
+
+		ses.sendEmail(params, function(err, data) {
+			if (err) console.log(err, err.stack); // an error occurred
+			else console.log(data);           // successful response
+			callback();
+		});
+}
 
 exports.fileImport = (event, context, callback) => {
 

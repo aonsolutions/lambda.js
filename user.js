@@ -1,5 +1,6 @@
 var aon = require('aon');
 var ERROR = require('./errors');
+var SES = require('aws-sdk/clients/ses');
 
 exports.getUser = (event, context, callback) => {
 	// allows for using callbacks as finish/error-handlers
@@ -39,7 +40,11 @@ exports.createUser = (event, context, callback) => {
 		if(esta("admin", user.groups)){
 			aon.user.createUser(event,  function(error, results, fields){
 				if(error) callback(error);
-				callback(null,responseMessage('200', JSON.stringify(results)));
+				else {
+					sesVerifyEmailIdentity(event.email);
+					sesAddRecipients(event.companies)
+					callback(null,responseMessage('200', JSON.stringify(results)));
+				}
 			});
 		} else callback(null, responseMessage('403', ERROR.ERROR_403));
 	});
@@ -79,4 +84,40 @@ function esta(o, oa){
 		}
 	}
 	return false;
+}
+
+function sesVerifyEmailIdentity(email){
+	var ses = new SES();
+	var params = {
+		EmailAddress: email
+	};
+	ses.verifyEmailIdentity(params, function(err, data) {
+		if (err) console.log(err, err.stack); // an error occurred
+		else console.log(data);           // successful response
+	});
+}
+
+function sesAddRecipients(companies){
+	var ses = new SES();
+	var params = {
+		RuleSetName: "default-rule-set"
+	};
+	ses.describeReceiptRuleSet(params, function(err, data) {
+		if (err) console.log(err, err.stack); // an error occurred
+		else {
+			var recipients = data.Rules[0].Recipients;
+			for(var i = 0; i < companies.length; i++){
+				recipients[recipients.length] = companies[i]+"@tedi.center";
+			}
+			data.Rules[0].Recipients = recipients;
+			var update = {
+				Rule: data.Rules[0],
+				RuleSetName: "default-rule-set"
+			};
+			ses.updateReceiptRule(update, function(err, data) {
+				if (err) console.log(err, err.stack); // an error occurred
+				else console.log(data);           // successful response
+			});
+		}
+	});	
 }
