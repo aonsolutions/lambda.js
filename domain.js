@@ -1,6 +1,7 @@
 
 var aon = require('aon');
 var mysql = require('mysql');
+var response = require('./response');
 
 console.log("DB_HOST:" + process.env.DB_HOST);
 console.log("DB_USER:" + process.env.DB_USER);
@@ -19,13 +20,7 @@ exports.all = (event, context, callback) => {
 	context.callbackWaitsForEmptyEventLoop = false;
 
 	aon.domain.all(pool, function(error, results, fields){
-   	callback(null, {
-			statusCode: '200',
-			body: JSON.stringify(results),
-			headers: {
-					'Content-Type': 'application/json',
-			},
-		});
+   	callback(null, response.responseMessage('200', JSON.stringify(results)));
   });
 };
 
@@ -41,12 +36,6 @@ exports.get = (event, context, callback) => {
 			return params.id.equals(id);
 		},
 		function(error, results, fields){
-   	callback(null, {
-			statusCode: '200',
-			body: JSON.stringify(results),
-			headers: {
-					'Content-Type': 'application/json',
-			},
-		});
+   	callback(null, response.responseMessage('200', JSON.stringify(results)));
   });
 };

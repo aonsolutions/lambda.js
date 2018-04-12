@@ -7,6 +7,7 @@ var AWS = require('aws-sdk');
 var SES = require('aws-sdk/clients/ses');
 
 var ERROR = require('./errors');
+var response = require('./response');
 
 var pool  = mysql.createPool({
 	host     : process.env.DB_HOST,
@@ -22,39 +23,42 @@ exports.get = (event, context, callback) => {
 	context.callbackWaitsForEmptyEventLoop = false;
 
 	var token = event.headers.session_id;
-	aon.auth.checkAuthentication(token, function(error, user){
-		if(error) callback(null, responseMessage('401', ERROR.ERROR_401));
+	aon.auth.checkAuthentication(token, function(error, result){
+		if(error) callback(null, response.responseMessage('401', ERROR.ERROR_401));
 		else {
+			var user = JSON.parse(result);
 			var data = {
 				company: event.pathParameters.company,
 				number: parseInt(event.pathParameters.number)
 			}
 			if(esta(data.company, user.companies)){
 				aon.invoiceDynamo.getInvoice(data, function(error, results, fields){
-					callback(null, responseMessage('200', JSON.stringify(results)));
+					callback(null, response.responseMessage('200', JSON.stringify(results)));
 				});
-			} else callback(null, responseMessage('403', ERROR.ERROR_403));
+			} else callback(null, response.responseMessage('403', ERROR.ERROR_403));
 		}
 	});
 };
 
 exports.delete = (event, context, callback) => {
+
 	// allows for using callbacks as finish/error-handlers
 	context.callbackWaitsForEmptyEventLoop = false;
 
 	var token = event.headers.session_id;
-	aon.auth.checkAuthentication(token, function(error, user){
-		if(error) callback(null, responseMessage('401', ERROR.ERROR_401));
+	aon.auth.checkAuthentication(token, function(error, result){
+		if(error) callback(null, response.responseMessage('401', ERROR.ERROR_401));
 		else {
+			var user = JSON.parse(result);
 			var data = {
 				company: event.pathParameters.company,
 				number: parseInt(event.pathParameters.number)
 			}
 			if(esta(data.company, user.companies)){
 				aon.invoiceDynamo.deleteInvoice(data, function(error, results, fields){
-					callback(null, responseMessage('200',  JSON.stringify(results)));
+					callback(null, response.responseMessage('200',  JSON.stringify(results)));
 				});
-			} else callback(null, responseMessage('403', ERROR.ERROR_403));
+			} else callback(null, response.responseMessage('403', ERROR.ERROR_403));
 		}
 	});
 };
@@ -64,17 +68,18 @@ exports.import = (event, context, callback) => {
 	context.callbackWaitsForEmptyEventLoop = false;
 
 	var token = event.headers.session_id;
-	aon.auth.checkAuthentication(token, function(error, user){
-		if(error) callback(null, responseMessage('401', ERROR.ERROR_401));
+	aon.auth.checkAuthentication(token, function(error, result){
+		if(error) callback(null, response.responseMessage('401', ERROR.ERROR_401));
 		else {
+			var user = JSON.parse(result);
 			if(esta(event.company, user.companies)){
 				aon.invoiceDynamo.importInvoice(event, function(error, results, fields){
-      		callback(null, responseMessage('200', JSON.stringify(results)));
+      		callback(null, response.responseMessage('200', JSON.stringify(results)));
 					aon.invoiceSql.tEDi2Aon(pool, JSON.stringify(results), function(err, res){
 						// TODO
 					});
   			});
-			} else callback(null, responseMessage('403', ERROR.ERROR_403));
+			} else callback(null, response.responseMessage('403', ERROR.ERROR_403));
 		}
 	});
 };
@@ -89,7 +94,7 @@ exports.refresh = (event, context, callback) => {
 	r.sbPassword = process.env.SB_PASSWD;
 
 	aon.invoiceDynamo.refreshSabbatic(r, function(error, results, fields){
-      callback(null, responseMessage('200', JSON.stringify(results)));
+      callback(null, response.responseMessage('200', JSON.stringify(results)));
   });
 };
 
@@ -117,7 +122,7 @@ exports.sesImport = (event, context, callback) => {
 				var s3 = new AWS.S3();
   			var options = {
 					Bucket:'/receive-email-ses',
-					Key:mail.messageId,
+					Key:mail.messageId
 				};
 				var arrayIndex = 0;
 				s3.getObject(options, function(err, res) {
@@ -161,7 +166,6 @@ exports.sesImport = (event, context, callback) => {
 						r.sbPassword = process.env.SB_PASSWD;
 						console.log(r.email + " - " + r.company);
 						aon.invoiceDynamo.importSabbatic(r, function(error, result){
-							console.log("lo enviara¿?");
 							replayEmail(mail, to, "Se ha recibido la solicitud correctamente, se está procesando en el sistema.", callback);
 						});
 					}
@@ -176,10 +180,10 @@ exports.sesImport = (event, context, callback) => {
 
 function replayEmail(mail, to, data, callback){
 	var ses = new SES();
-	var html_data = "<p>Estimado Cliente,</p>"
-			+	"<p>" + data + "</p>"
-			+	"<p>Atentamente,</p>"
-			+	"<p>Departamento técnico | aonSolutions";
+	var html_data = "<p>Estimado Cliente,</p>" +
+		"<p>" + data + "</p>" +
+		"<p>Atentamente,</p>"	+
+		"<p>Departamento técnico | aonSolutions";
 	var params = {
 		Destination: { /* required */
 				CcAddresses: [],
@@ -219,16 +223,6 @@ function replayEmail(mail, to, data, callback){
 exports.fileImport = (event, context, callback) => {
 
 };
-
-function responseMessage(code, description){
-	return {
-	 statusCode: code,
-	 body: description,
-	 headers: {
-		 'Content-Type': 'application/json',
-	 }
-	}
-}
 
 function esta(o, oa){
 	for(var i = 0 ; i < oa.length; i++){

@@ -1,0 +1,1051 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Transform": "AWS::Serverless-2016-10-31",
+	"Description": "tEDI REST API",
+	"Parameters" : {
+		"Key" : {
+			"Type" : "String"
+		},
+		"Bucket" : {
+			"Type" : "String"
+		},
+    "DBUSER" : {
+      "Description" : "Aon Solutions database admin account username.",
+      "Type" : "String"
+    },
+    "DBPASSWD" :{
+      "Description" : "Aon Solutions database admin account password.",
+      "Type" : "String"
+    },
+    "DBNAME" : {
+      "Description" : "Aon Solutions database name.",
+      "Type" : "String"
+    },
+    "DBHOST" : {
+      "Description" : "Aon Solutions database host.",
+      "Type" : "String"
+    },
+    "TOKENSECRET" : {
+      "Description" : "Token secret, to code/encode authentication token.",
+      "Type" : "String"
+    },
+    "SBUSER" : {
+      "Description" : "Sabbatic admin account username.",
+      "Type" : "String"
+    },
+    "SBPASSWD" : {
+      "Description" : "Sabbatic admin account password.",
+      "Type" : "String"
+    }
+	},
+	"Resources": {
+		"SnapshotApi": {
+			"Type": "AWS::Serverless::Api",
+			"Properties": {
+				"StageName": "SNAPSHOT",
+				"Variables": {
+					"SB_USER" : { "Ref" : "SBUSER" },
+					"SB_PASSWD" : { "Ref" : "SBPASSWD" },
+					"TOKEN_SECRET" : { "Ref" : "TOKENSECRET" },
+					"DB_USER" : { "Ref" : "DBUSER" },
+					"DB_PASSWD" : { "Ref" : "DBPASSWD" },
+					"DB_NAME" : { "Ref" : "DBNAME" },
+					"DB_HOST" : { "Ref" : "DBHOST" }
+				},
+				"DefinitionBody": {
+					"swagger": "2.0",
+					"info": {
+						"title":  "tEDI REST API"
+  				},
+					"schemes": [
+						"https"
+					],
+					"paths": {
+						"/auth": {
+							"post": {
+								"produces": [
+									"application/json"
+								],
+								"parameters": [
+									{
+										"name" : "id",
+										"in": "path",
+										"required": false,
+										"type": "string"
+									}
+								],
+								"responses": {
+									"200":{
+										"description":"200 response",
+										"schema":{
+									 		"$ref": "#/definitions/Empty"
+										},
+								 		"headers":{
+									 		"Access-Control-Allow-Origin":{
+										 		"type": "string"
+											},
+									 		"Access-Control-Allow-Methods":{
+										 		"type": "string"
+									 		},
+											"Access-Control-Allow-Headers":{
+										 		"type": "string"
+											}
+										}
+									}
+								},
+								"x-amazon-apigateway-integration": {
+									"responses": {
+								 		"default": {
+									 		"statusCode": "200",
+											"responseParameters":{
+												"method.response.header.Access-Control-Allow-Methods": "'POST'",
+                      	"method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'",
+                      	"method.response.header.Access-Control-Allow-Origin": "'*'"
+											}
+								 		}
+							 		},
+							 		"uri": {
+								 		"Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthPostFunction.Arn}/invocations"
+							 		},
+							 		"passthroughBehavior": "when_no_match",
+							 		"httpMethod": "POST",
+							 		"type": "aws"
+								}
+							}
+						},
+						"/user": {
+							"get": {
+								"produces": [
+									"application/json"
+								],
+								"parameters": [
+									{
+											"name" : "email",
+											"in": "path",
+											"required": false,
+											"type": "string"
+									}
+								],
+								"responses": {
+				          "200": {
+				            "description": "200 response",
+				            "schema": {
+				              "$ref": "#/definitions/Empty"
+				            },
+								 		"headers":{
+									 		"Access-Control-Allow-Origin":{
+										 		"type": "string"
+											},
+									 		"Access-Control-Allow-Methods":{
+										 		"type": "string"
+									 		},
+											"Access-Control-Allow-Headers":{
+										 		"type": "string"
+											}
+										}
+				          }
+				        },
+								"x-amazon-apigateway-integration": {
+							 	 "responses": {
+							 		 "default": {
+							 			 "statusCode": "200",
+										 "responseParameters":{
+											 "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,POST,GET'",
+											 "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,session_id'",
+											 "method.response.header.Access-Control-Allow-Origin": "'*'"
+										 }
+							 		 }
+							 	 },
+								 "uri": {
+									 "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UserGetFunction.Arn}/invocations"
+								 },
+								 "passthroughBehavior": "when_no_match",
+			           "httpMethod": "POST",
+			           "type": "aws_proxy"
+							  }
+							},
+							"post":{
+								"produces": [
+									"application/json"
+								],
+								"parameters": [
+									{
+											"name" : "email",
+											"in": "path",
+											"required": false,
+											"type": "string"
+									}
+								],
+								"responses": {
+									"200": {
+										"description": "200 response",
+										"schema": {
+											"$ref": "#/definitions/Empty"
+										},
+								 		"headers":{
+									 		"Access-Control-Allow-Origin":{
+										 		"type": "string"
+											},
+									 		"Access-Control-Allow-Methods":{
+										 		"type": "string"
+									 		},
+											"Access-Control-Allow-Headers":{
+										 		"type": "string"
+											}
+										}
+									}
+								},
+								"x-amazon-apigateway-integration": {
+								 "responses": {
+									 "default": {
+										 "statusCode": "200",
+										 "responseParameters":{
+											 "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,POST,GET'",
+											 "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,session_id'",
+											 "method.response.header.Access-Control-Allow-Origin": "'*'"
+										 }
+									 }
+								 },
+								 "uri": {
+									 "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UserCreateFunction.Arn}/invocations"
+								 },
+								 "passthroughBehavior": "when_no_match",
+								 "httpMethod": "POST",
+								 "type": "aws_proxy"
+								}
+							},
+							"options":{
+								"consumes": [
+                  "application/json"
+                ],
+                "produces": [
+                  "application/json"
+                ],
+								"responses":{
+									"200":{
+										"description":"200 response",
+										"schema":{
+									 		"$ref": "#/definitions/Empty"
+										},
+								 		"headers":{
+									 		"Access-Control-Allow-Origin":{
+										 		"type": "string"
+											},
+									 		"Access-Control-Allow-Methods":{
+										 		"type": "string"
+									 		},
+											"Access-Control-Allow-Headers":{
+										 		"type": "string"
+											}
+										}
+									}
+								},
+								"x-amazon-apigateway-integration": {
+									"requestTemplates": {
+                    "application/json": "{\"statusCode\": 200}"
+                  },
+							 		"responses": {
+								 		"default": {
+									 		"statusCode": "200",
+											"responseParameters":{
+												"method.response.header.Access-Control-Allow-Methods": "'OPTIONS,POST,GET'",
+                      	"method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,session_id'",
+                      	"method.response.header.Access-Control-Allow-Origin": "'*'"
+											}
+								 		}
+							 		},
+							 		"passthroughBehavior": "when_no_match",
+							 		"type": "mock"
+								}
+							}
+						},
+						"/user/{email}": {
+							"get": {
+								"produces": [
+									"application/json"
+								],
+								"parameters": [
+									{
+											"name" : "company",
+											"in": "path",
+											"required": true,
+											"type": "string"
+									}
+								],
+								"responses": {
+				          "200": {
+				            "description": "200 response",
+				            "schema": {
+				              "$ref": "#/definitions/Empty"
+				            },
+								 		"headers":{
+									 		"Access-Control-Allow-Origin":{
+										 		"type": "string"
+											},
+									 		"Access-Control-Allow-Methods":{
+										 		"type": "string"
+									 		},
+											"Access-Control-Allow-Headers":{
+										 		"type": "string"
+											}
+										}
+				          }
+				        },
+								"x-amazon-apigateway-integration": {
+							 	 "responses": {
+							 		 "default": {
+							 			 "statusCode": "200",
+										 "responseParameters":{
+											 "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,POST,GET,DELETE'",
+											 "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,session_id'",
+											 "method.response.header.Access-Control-Allow-Origin": "'*'"
+										 }
+							 		 }
+							 	 },
+								 "uri": {
+									 "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UserGetFunction.Arn}/invocations"
+								 },
+								 "passthroughBehavior": "when_no_match",
+			           "httpMethod": "GET",
+			           "type": "aws_proxy"
+							  }
+							},
+							"delete":{
+								"produces": [
+									"application/json"
+								],
+								"parameters": [
+									{
+										"name" : "id",
+										"in": "path",
+										"required": true,
+										"type": "string"
+									}
+								],
+								"responses": {
+									"200": {
+										"description": "200 response",
+										"schema": {
+											"$ref": "#/definitions/Empty"
+										},
+								 		"headers":{
+									 		"Access-Control-Allow-Origin":{
+										 		"type": "string"
+											},
+									 		"Access-Control-Allow-Methods":{
+										 		"type": "string"
+									 		},
+											"Access-Control-Allow-Headers":{
+										 		"type": "string"
+											}
+										}
+									}
+								},
+								"x-amazon-apigateway-integration": {
+									"responses": {
+										"default": {
+											"statusCode": "200",
+											"responseParameters":{
+												"method.response.header.Access-Control-Allow-Methods": "'OPTIONS,POST,GET,DELETE'",
+                      	"method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,session_id'",
+                      	"method.response.header.Access-Control-Allow-Origin": "'*'"
+											}
+										}
+									},
+									"uri": {
+										"Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UserDeleteFunction.Arn}/invocations"
+									},
+									"passthroughBehavior": "when_no_match",
+									"httpMethod": "DELETE",
+									"type": "aws_proxy"
+								}
+							},
+							"post":{
+								"produces": [
+									"application/json"
+								],
+								"parameters": [
+									{
+										"name" : "id",
+										"in": "path",
+										"required": true,
+										"type": "string"
+									}
+								],
+								"responses": {
+									"200": {
+										"description": "200 response",
+										"schema": {
+											"$ref": "#/definitions/Empty"
+										},
+								 		"headers":{
+									 		"Access-Control-Allow-Origin":{
+										 		"type": "string"
+											},
+									 		"Access-Control-Allow-Methods":{
+										 		"type": "string"
+									 		},
+											"Access-Control-Allow-Headers":{
+										 		"type": "string"
+											}
+										}
+									}
+								},
+								"x-amazon-apigateway-integration": {
+									"responses": {
+										"default": {
+											"statusCode": "200",
+											"responseParameters":{
+												"method.response.header.Access-Control-Allow-Methods": "'OPTIONS,POST,GET,DELETE'",
+                      	"method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,session_id'",
+                      	"method.response.header.Access-Control-Allow-Origin": "'*'"
+											}
+										}
+									},
+									"uri": {
+										"Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UserUpdateFunction.Arn}/invocations"
+									},
+									"passthroughBehavior": "when_no_match",
+									"httpMethod": "POST",
+									"type": "aws_proxy"
+								}
+							},
+							"options":{
+								"consumes":[
+									"application/json"
+								],
+								"produces": [
+									"application/json"
+								],
+								"responses":{
+									"200":{
+										"description":"200 response",
+										"schema":{
+									 		"$ref": "#/definitions/Empty"
+										},
+								 		"headers":{
+									 		"Access-Control-Allow-Origin":{
+										 		"type": "string"
+											},
+									 		"Access-Control-Allow-Methods":{
+										 		"type": "string"
+									 		},
+											"Access-Control-Allow-Headers":{
+										 		"type": "string"
+											}
+										}
+									}
+								},
+								"x-amazon-apigateway-integration": {
+							 		"responses": {
+								 		"default": {
+									 		"statusCode": "200",
+											"responseParameters":{
+												"method.response.header.Access-Control-Allow-Methods": "'OPTIONS,POST,GET,DELETE'",
+                      	"method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,session_id'",
+                      	"method.response.header.Access-Control-Allow-Origin": "'*'"
+											},
+											"responseTemplates":{
+												"application/json":""
+											}
+								 		}
+							 		},
+							 		"passthroughBehavior": "when_no_match",
+									"requestTemplates":{
+                  	"application/json": {"statusCode": 200}
+							 		}
+									,"httpMethod": "OPTIONS",
+							 		"type": "mock"
+								}
+							}
+						},
+						"/invoice": {
+							"post": {
+								"produces": [
+									"application/json"
+								],
+								"parameters": [
+									{
+											"name" : "domain",
+											"in": "path",
+											"required": false,
+											"type": "string"
+									}
+								],
+								"responses": {
+				          "200": {
+				            "description": "200 response",
+				            "schema": {
+				              "$ref": "#/definitions/Empty"
+				            },
+								 		"headers":{
+									 		"Access-Control-Allow-Origin":{
+										 		"type": "string"
+											},
+									 		"Access-Control-Allow-Methods":{
+										 		"type": "string"
+									 		},
+											"Access-Control-Allow-Headers":{
+										 		"type": "string"
+											}
+										}
+				          }
+				        },
+								"x-amazon-apigateway-integration": {
+							 	 "responses": {
+							 		 "default": {
+							 			 "statusCode": "200",
+										 "responseParameters":{
+											 "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,POST'",
+											 "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,session_id'",
+											 "method.response.header.Access-Control-Allow-Origin": "'*'"
+										 }
+							 		 }
+							 	 },
+								 "uri": {
+									 "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InvoicePostFunction.Arn}/invocations"
+								 },
+								 "passthroughBehavior": "when_no_match",
+			           "httpMethod": "POST",
+			           "type": "aws_proxy"
+							  }
+							},
+							"options":{
+								"consumes": [
+                  "application/json"
+                ],
+                "produces": [
+                  "application/json"
+                ],
+								"responses":{
+									"200":{
+										"description":"200 response",
+										"schema":{
+									 		"$ref": "#/definitions/Empty"
+										},
+								 		"headers":{
+									 		"Access-Control-Allow-Origin":{
+										 		"type": "string"
+											},
+									 		"Access-Control-Allow-Methods":{
+										 		"type": "string"
+									 		},
+											"Access-Control-Allow-Headers":{
+										 		"type": "string"
+											}
+										}
+									}
+								},
+								"x-amazon-apigateway-integration": {
+									"requestTemplates": {
+                    "application/json": "{\"statusCode\": 200}"
+                  },
+							 		"responses": {
+								 		"default": {
+									 		"statusCode": "200",
+											"responseParameters":{
+												"method.response.header.Access-Control-Allow-Methods": "'OPTIONS,POST'",
+                      	"method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,session_id'",
+                      	"method.response.header.Access-Control-Allow-Origin": "'*'"
+											}
+								 		}
+							 		},
+							 		"passthroughBehavior": "when_no_match",
+							 		"type": "mock"
+								}
+							}
+						},
+						"/invoice/{company}": {
+							"get": {
+								"produces": [
+									"application/json"
+								],
+								"parameters": [
+									{
+											"name" : "company",
+											"in": "path",
+											"required": true,
+											"type": "string"
+									}
+								],
+								"responses": {
+				          "200": {
+				            "description": "200 response",
+				            "schema": {
+				              "$ref": "#/definitions/Empty"
+				            },
+								 		"headers":{
+									 		"Access-Control-Allow-Origin":{
+										 		"type": "string"
+											},
+									 		"Access-Control-Allow-Methods":{
+										 		"type": "string"
+									 		},
+											"Access-Control-Allow-Headers":{
+										 		"type": "string"
+											}
+										}
+				          }
+				        },
+								"x-amazon-apigateway-integration": {
+							 	 "responses": {
+							 		 "default": {
+							 			 "statusCode": "200",
+										 "responseParameters":{
+											 "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET'",
+											 "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,session_id'",
+											 "method.response.header.Access-Control-Allow-Origin": "'*'"
+										 }
+							 		 }
+							 	 },
+								 "uri": {
+									 "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InvoiceGetFunction.Arn}/invocations"
+								 },
+								 "passthroughBehavior": "when_no_match",
+			           "httpMethod": "POST",
+			           "type": "aws_proxy"
+							  }
+							},
+							"options":{
+								"consumes": [
+                  "application/json"
+                ],
+                "produces": [
+                  "application/json"
+                ],
+								"responses":{
+									"200":{
+										"description":"200 response",
+										"schema":{
+									 		"$ref": "#/definitions/Empty"
+										},
+								 		"headers":{
+									 		"Access-Control-Allow-Origin":{
+										 		"type": "string"
+											},
+									 		"Access-Control-Allow-Methods":{
+										 		"type": "string"
+									 		},
+											"Access-Control-Allow-Headers":{
+										 		"type": "string"
+											}
+										}
+									}
+								},
+								"x-amazon-apigateway-integration": {
+									"requestTemplates": {
+                    "application/json": "{\"statusCode\": 200}"
+                  },
+							 		"responses": {
+								 		"default": {
+									 		"statusCode": "200",
+											"responseParameters":{
+												"method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET'",
+                      	"method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,session_id'",
+                      	"method.response.header.Access-Control-Allow-Origin": "'*'"
+											}
+								 		}
+							 		},
+							 		"passthroughBehavior": "when_no_match",
+							 		"type": "mock"
+								}
+							}
+						},
+						"/invoice/{company}/{number}": {
+							"get": {
+								"produces": [
+									"application/json"
+								],
+								"parameters": [
+									{
+										"name" : "company",
+										"in": "path",
+										"required": true,
+										"type": "string"
+									},
+									{
+										"name" : "number",
+										"in": "path",
+										"required": true,
+										"type": "string"
+									}
+								],
+								"responses": {
+				          "200": {
+				            "description": "200 response",
+				            "schema": {
+				              "$ref": "#/definitions/Empty"
+				            },
+								 		"headers":{
+									 		"Access-Control-Allow-Origin":{
+										 		"type": "string"
+											},
+									 		"Access-Control-Allow-Methods":{
+										 		"type": "string"
+									 		},
+											"Access-Control-Allow-Headers":{
+										 		"type": "string"
+											}
+										}
+				          }
+				        },
+								"x-amazon-apigateway-integration": {
+							 	 "responses": {
+							 		 "default": {
+							 			 "statusCode": "200",
+										 "responseParameters":{
+											 "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,DELETE'",
+											 "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,session_id'",
+											 "method.response.header.Access-Control-Allow-Origin": "'*'"
+										 }
+							 		 }
+							 	 },
+								 "uri": {
+									 "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InvoiceGetFunction.Arn}/invocations"
+								 },
+								 "passthroughBehavior": "when_no_match",
+			           "httpMethod": "POST",
+			           "type": "aws_proxy"
+							  }
+							},
+							"delete": {
+								"produces": [
+									"application/json"
+								],
+								"parameters": [
+									{
+										"name" : "company",
+										"in": "path",
+										"required": true,
+										"type": "string"
+									},
+									{
+										"name" : "number",
+										"in": "path",
+										"required": true,
+										"type": "string"
+									}
+								],
+								"responses": {
+				          "200": {
+				            "description": "200 response",
+				            "schema": {
+				              "$ref": "#/definitions/Empty"
+				            },
+								 		"headers":{
+									 		"Access-Control-Allow-Origin":{
+										 		"type": "string"
+											},
+									 		"Access-Control-Allow-Methods":{
+										 		"type": "string"
+									 		},
+											"Access-Control-Allow-Headers":{
+										 		"type": "string"
+											}
+										}
+				          }
+				        },
+								"x-amazon-apigateway-integration": {
+							 	 "responses": {
+							 		 "default": {
+							 			 "statusCode": "200",
+										 "responseParameters":{
+											 "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,DELETE'",
+											 "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,session_id'",
+											 "method.response.header.Access-Control-Allow-Origin": "'*'"
+										 }
+							 		 }
+							 	 },
+								 "uri": {
+									 "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InvoiceDeleteFunction.Arn}/invocations"
+								 },
+								 "passthroughBehavior": "when_no_match",
+			           "httpMethod": "POST",
+			           "type": "aws_proxy"
+							  }
+							},
+							"options":{
+								"consumes": [
+                  "application/json"
+                ],
+                "produces": [
+                  "application/json"
+                ],
+								"responses":{
+									"200":{
+										"description":"200 response",
+										"schema":{
+									 		"$ref": "#/definitions/Empty"
+										},
+								 		"headers":{
+									 		"Access-Control-Allow-Origin":{
+										 		"type": "string"
+											},
+									 		"Access-Control-Allow-Methods":{
+										 		"type": "string"
+									 		},
+											"Access-Control-Allow-Headers":{
+										 		"type": "string"
+											}
+										}
+									}
+								},
+								"x-amazon-apigateway-integration": {
+									"requestTemplates": {
+                    "application/json": "{\"statusCode\": 200}"
+                  },
+							 		"responses": {
+								 		"default": {
+									 		"statusCode": "200",
+											"responseParameters":{
+												"method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,DELETE'",
+                      	"method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,session_id'",
+                      	"method.response.header.Access-Control-Allow-Origin": "'*'"
+											}
+								 		}
+							 		},
+							 		"passthroughBehavior": "when_no_match",
+							 		"type": "mock"
+								}
+							}
+						}
+					},
+					"definitions": {
+				    "Empty": {
+				      "type": "object",
+				      "title": "Empty Schema"
+				    }
+				  },
+				  "x-amazon-apigateway-binary-media-types": [
+				    "application/pdf"
+				  ]
+
+				}
+			}
+		},
+		"AuthPostFunction": {
+			"Type": "AWS::Serverless::Function",
+			"Properties": {
+				"Handler": "authentication.login",
+				"Runtime": "nodejs6.10",
+				"CodeUri":{
+					"Key" : { "Ref": "Key" },
+					"Bucket" : { "Ref": "Bucket" }
+				},
+				"Policies": [ "AWSLambdaBasicExecutionRole","AWSLambdaVPCAccessExecutionRole","AmazonDynamoDBFullAccess"],
+				"VpcConfig": {
+					"SubnetIds" : ["subnet-3c051a58", "subnet-0d78677b"],
+				  "SecurityGroupIds" : [ "sg-37015f4f" ]
+				},
+				"Environment": {
+					"Variables": {
+						"TOKEN_SECRET" : { "Ref" : "TOKENSECRET" }
+					}
+				},
+				"Timeout":300
+			}
+		},
+		"InvoicePostFunction": {
+			"Type": "AWS::Serverless::Function",
+			"Properties": {
+				"Handler": "invoice.import",
+				"Runtime": "nodejs6.10",
+				"CodeUri":{
+					"Key" : { "Ref": "Key" },
+					"Bucket" : { "Ref": "Bucket" }
+				},
+				"Policies": [ "AWSLambdaBasicExecutionRole","AWSLambdaVPCAccessExecutionRole","AmazonDynamoDBFullAccess"],
+				"VpcConfig": {
+					"SubnetIds" : ["subnet-3c051a58", "subnet-0d78677b"],
+					"SecurityGroupIds" : [ "sg-37015f4f" ]
+				},
+				"Environment": {
+					"Variables": {
+	          "TOKEN_SECRET" : { "Ref" : "TOKENSECRET" }
+					}
+				},
+				"Timeout":300
+			}
+		},
+		"InvoiceGetFunction": {
+			"Type": "AWS::Serverless::Function",
+			"Properties": {
+				"Handler": "invoice.get",
+				"Runtime": "nodejs6.10",
+				"CodeUri":{
+					"Key" : { "Ref": "Key" },
+					"Bucket" : { "Ref": "Bucket" }
+				},
+				"Policies": [ "AWSLambdaBasicExecutionRole","AWSLambdaVPCAccessExecutionRole","AmazonDynamoDBFullAccess"],
+				"VpcConfig": {
+					"SubnetIds" : ["subnet-3c051a58", "subnet-0d78677b"],
+				  "SecurityGroupIds" : [ "sg-37015f4f" ]
+				},
+				"Environment": {
+					"Variables": {
+						"TOKEN_SECRET" : { "Ref" : "TOKENSECRET" }
+					}
+				},
+				"Timeout":300
+			}
+		},
+		"InvoiceDeleteFunction": {
+			"Type": "AWS::Serverless::Function",
+			"Properties": {
+				"Handler": "invoice.delete",
+				"Runtime": "nodejs6.10",
+				"CodeUri":{
+					"Key" : { "Ref": "Key" },
+					"Bucket" : { "Ref": "Bucket" }
+				},
+				"Policies": [ "AWSLambdaBasicExecutionRole","AWSLambdaVPCAccessExecutionRole","AmazonDynamoDBFullAccess"],
+				"VpcConfig": {
+					"SubnetIds" : ["subnet-3c051a58", "subnet-0d78677b"],
+				  "SecurityGroupIds" : [ "sg-37015f4f" ]
+				},
+				"Environment": {
+					"Variables": {
+						"TOKEN_SECRET" : { "Ref" : "TOKENSECRET" }
+					}
+				},
+				"Timeout":300
+			}
+		},
+		"InvoiceSesImportFunction": {
+			"Type": "AWS::Serverless::Function",
+			"Properties": {
+				"Handler": "invoice.sesImport",
+				"Runtime": "nodejs6.10",
+				"CodeUri":{
+					"Key" : { "Ref": "Key" },
+					"Bucket" : { "Ref": "Bucket" }
+				},
+				"Policies": [ "AWSLambdaBasicExecutionRole","AWSLambdaVPCAccessExecutionRole", "AmazonS3FullAccess", "AmazonDynamoDBFullAccess", "AmazonSESFullAccess"],
+				"VpcConfig": {
+					"SubnetIds" : ["subnet-3c051a58", "subnet-0d78677b"],
+				  "SecurityGroupIds" : [ "sg-37015f4f" ]
+				},
+				"Environment": {
+					"Variables": {
+						"SB_USER" : { "Ref" : "SBUSER" },
+						"SB_PASSWD" : { "Ref" : "SBPASSWD" },
+						"TOKEN_SECRET" : { "Ref" : "TOKENSECRET" }
+					}
+				},
+				"Timeout":300
+			}
+		},
+		"InvoiceSabbaticRefreshFunction": {
+			"Type": "AWS::Serverless::Function",
+			"Properties": {
+				"Handler": "invoice.refresh",
+				"Runtime": "nodejs6.10",
+				"CodeUri":{
+					"Key" : { "Ref": "Key" },
+					"Bucket" : { "Ref": "Bucket" }
+				},
+				"Policies": [ "AWSLambdaBasicExecutionRole","AWSLambdaVPCAccessExecutionRole","AmazonDynamoDBFullAccess"],
+				"VpcConfig": {
+					"SubnetIds" : ["subnet-3c051a58", "subnet-0d78677b"],
+				  "SecurityGroupIds" : [ "sg-37015f4f" ]
+				},
+				"Environment": {
+					"Variables": {
+						"SB_USER" : { "Ref" : "SBUSER" },
+						"SB_PASSWD" : { "Ref" : "SBPASSWD" },
+						"TOKEN_SECRET" : { "Ref" : "TOKENSECRET" }
+					}
+				},
+				"Timeout":300
+			}
+		},
+		"UserGetFunction":{
+			"Type": "AWS::Serverless::Function",
+			"Properties": {
+				"Handler": "user.getUser",
+				"Runtime": "nodejs6.10",
+				"CodeUri":{
+					"Key" : { "Ref": "Key" },
+					"Bucket" : { "Ref": "Bucket" }
+				},
+				"Policies": [ "AWSLambdaBasicExecutionRole","AWSLambdaVPCAccessExecutionRole","AmazonDynamoDBFullAccess"],
+				"VpcConfig": {
+					"SubnetIds" : ["subnet-3c051a58", "subnet-0d78677b"],
+					"SecurityGroupIds" : [ "sg-37015f4f" ]
+				},
+				"Environment": {
+					"Variables": {
+						"TOKEN_SECRET" : { "Ref" : "TOKENSECRET" }
+					}
+				},
+				"Timeout":300
+			}
+		},
+		"UserCreateFunction":{
+			"Type": "AWS::Serverless::Function",
+			"Properties": {
+				"Handler": "user.createUser",
+				"Runtime": "nodejs6.10",
+				"CodeUri":{
+					"Key" : { "Ref": "Key" },
+					"Bucket" : { "Ref": "Bucket" }
+				},
+				"Policies": [ "AWSLambdaBasicExecutionRole","AWSLambdaVPCAccessExecutionRole","AmazonDynamoDBFullAccess", "AmazonSESFullAccess"],
+				"VpcConfig": {
+					"SubnetIds" : ["subnet-3c051a58", "subnet-0d78677b"],
+					"SecurityGroupIds" : [ "sg-37015f4f" ]
+				},
+				"Environment": {
+					"Variables": {
+						"TOKEN_SECRET" : { "Ref" : "TOKENSECRET" }
+					}
+				},
+				"Timeout":300
+			}
+		},
+		"UserUpdateFunction":{
+			"Type": "AWS::Serverless::Function",
+			"Properties": {
+				"Handler": "user.updateUser",
+				"Runtime": "nodejs6.10",
+				"CodeUri":{
+					"Key" : { "Ref": "Key" },
+					"Bucket" : { "Ref": "Bucket" }
+				},
+				"Policies": [ "AWSLambdaBasicExecutionRole","AWSLambdaVPCAccessExecutionRole","AmazonDynamoDBFullAccess"],
+				"VpcConfig": {
+					"SubnetIds" : ["subnet-3c051a58", "subnet-0d78677b"],
+					"SecurityGroupIds" : [ "sg-37015f4f" ]
+				},
+				"Environment": {
+					"Variables": {
+	          "TOKEN_SECRET" : { "Ref" : "TOKENSECRET" }
+					}
+				},
+				"Timeout":300
+			}
+		},
+		"UserDeleteFunction":{
+			"Type": "AWS::Serverless::Function",
+			"Properties": {
+				"Handler": "user.deleteUser",
+				"Runtime": "nodejs6.10",
+				"CodeUri":{
+					"Key" : { "Ref": "Key" },
+					"Bucket" : { "Ref": "Bucket" }
+				},
+				"Policies": [ "AWSLambdaBasicExecutionRole","AWSLambdaVPCAccessExecutionRole","AmazonDynamoDBFullAccess"],
+				"VpcConfig": {
+					"SubnetIds" : ["subnet-3c051a58", "subnet-0d78677b"],
+					"SecurityGroupIds" : [ "sg-37015f4f" ]
+				},
+				"Environment": {
+					"Variables": {
+	          "TOKEN_SECRET" : { "Ref" : "TOKENSECRET" }
+					}
+				},
+				"Timeout":300
+			}
+		}
+	}
+}

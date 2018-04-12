@@ -1,5 +1,6 @@
 var aon = require('aon');
 var ERROR = require('./errors');
+var response = require('./response');
 var SES = require('aws-sdk/clients/ses');
 
 exports.getUser = (event, context, callback) => {
@@ -9,11 +10,11 @@ exports.getUser = (event, context, callback) => {
 	var token = event.headers.session_id;
 	aon.auth.checkAuthentication(token, function(error, result){
 		var	user = JSON.parse(result);
-		if(error) callback(null, responseMessage('401', ERROR.ERROR_401));
+		if(error) callback(null, response.responseMessage('401', ERROR.ERROR_401));
 		if(esta("admin", user.groups)){
 			if(event.pathParameters && event.pathParameters.email){
 				aon.user.getUser(event.pathParameters.email, function(error, results, fields){
-					callback(null, responseMessage('200', JSON.stringify(results)));
+					callback(null, response.responseMessage('200', JSON.stringify(results)));
 				});
 			} else {
 				var data = event.queryStringParameters ? {
@@ -22,33 +23,35 @@ exports.getUser = (event, context, callback) => {
 					group: event.queryStringParameters.group
 				} : {};
 				aon.user.getUserList(data, function(error, results, fields){
-					callback(null, responseMessage('200', JSON.stringify(results)));
+					callback(null, response.responseMessage('200', JSON.stringify(results)));
 				});
 			}
-		} else callback(null, responseMessage('403', ERROR.ERROR_403));
+		} else callback(null, response.responseMessage('403', ERROR.ERROR_403));
 	});
-}
+};
 
 exports.createUser = (event, context, callback) => {
 	// allows for using callbacks as finish/error-handlers
 	context.callbackWaitsForEmptyEventLoop = false;
-
 	var token = event.headers.session_id;
 	aon.auth.checkAuthentication(token, function(error, result){
 		var	user = JSON.parse(result);
-		if(error) callback(null, responseMessage('401', ERROR.ERROR_401));
+		if(error) callback(null, response.responseMessage('401', ERROR.ERROR_401));
 		if(esta("admin", user.groups)){
-			aon.user.createUser(event,  function(error, results, fields){
+			var newUser = JSON.parse(event.body);
+			aon.user.createUser(newUser,  function(error, results, fields){
 				if(error) callback(error);
 				else {
-					sesVerifyEmailIdentity(event.email);
-					sesAddRecipients(event.companies)
-					callback(null,responseMessage('200', JSON.stringify(results)));
+					sesVerifyEmailIdentity(newUser.email, function(error, result){
+						sesAddRecipients(newUser.companies, function(error, result){
+								callback(null, response.responseMessage('200', JSON.stringify(results)));
+						})
+					});
 				}
 			});
-		} else callback(null, responseMessage('403', ERROR.ERROR_403));
+		} else callback(null, response.responseMessage('403', ERROR.ERROR_403));
 	});
-}
+};
 
 exports.deleteUser = (event, context, callback) => {
 	// allows for using callbacks as finish/error-handlers
@@ -57,47 +60,38 @@ exports.deleteUser = (event, context, callback) => {
 	var token = event.headers.session_id;
 	aon.auth.checkAuthentication(token, function(error, result){
 		var	user = JSON.parse(result);
-		if(error) callback(null, responseMessage('401', ERROR.ERROR_401));
+		if(error) callback(null, response.responseMessage('401', ERROR.ERROR_401));
 		if(esta("admin", user.groups)){
-  		aon.user.deleteUser(event,  function(error, results, fields){
+  		aon.user.deleteUser(event.pathParameters.email,  function(error, results, fields){
 				if(error) callback(error);
-				callback(null,responseMessage('200', JSON.stringify(results)));
+				else callback(null, response.responseMessage('200', JSON.stringify(results)));
 			});
-		} else callback(null, responseMessage('403', ERROR.ERROR_403));
+		} else callback(null, response.responseMessage('403', ERROR.ERROR_403));
 	});
-}
+};
 
-function responseMessage(code, description){
-	return {
-	 statusCode: code,
-	 body: description,
-	 headers: {
-				 'Content-Type': 'application/json',
-	 	 }
-	}
-}
+exports.updateUser = (event, context, callback) => {
+	//TODO
+};
 
 function esta(o, oa){
 	if(oa && oa.length){
-		for(var i = 0 ; i < oa.length; i++){
+		for(var i = 0; i < oa.length; i++){
 			if(o == oa[i]) return true;
 		}
 	}
 	return false;
 }
 
-function sesVerifyEmailIdentity(email){
+function sesVerifyEmailIdentity(email, cb){
 	var ses = new SES();
 	var params = {
 		EmailAddress: email
 	};
-	ses.verifyEmailIdentity(params, function(err, data) {
-		if (err) console.log(err, err.stack); // an error occurred
-		else console.log(data);           // successful response
-	});
+	ses.verifyEmailIdentity(params, cb);
 }
 
-function sesAddRecipients(companies){
+function sesAddRecipients(companies, cb){
 	var ses = new SES();
 	var params = {
 		RuleSetName: "default-rule-set"
@@ -114,10 +108,7 @@ function sesAddRecipients(companies){
 				Rule: data.Rules[0],
 				RuleSetName: "default-rule-set"
 			};
-			ses.updateReceiptRule(update, function(err, data) {
-				if (err) console.log(err, err.stack); // an error occurred
-				else console.log(data);           // successful response
-			});
+			ses.updateReceiptRule(update, cb);
 		}
-	});	
+	});
 }
